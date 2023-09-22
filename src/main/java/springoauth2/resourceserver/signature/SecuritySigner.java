@@ -1,9 +1,6 @@
 package springoauth2.resourceserver.signature;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.KeyLengthException;
+import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -25,7 +22,7 @@ public abstract class SecuritySigner {
     /**
      * JWT 토큰 생성 및 반환
      */
-    protected String getJwtTokenInternal(MACSigner jwsSigner, UserDetails user, JWK jwk) throws JOSEException {
+    protected String getJwtTokenInternal(JWSSigner jwsSigner, UserDetails user, JWK jwk) throws JOSEException {
         // JWT 헤더
         JWSHeader header = new JWSHeader.Builder((JWSAlgorithm) jwk.getAlgorithm())
                 .keyID(jwk.getKeyID())

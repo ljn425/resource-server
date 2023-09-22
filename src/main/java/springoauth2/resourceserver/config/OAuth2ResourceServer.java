@@ -1,6 +1,10 @@
 package springoauth2.resourceserver.config;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.RSAKey;
 import jakarta.servlet.Filter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -26,15 +30,14 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import springoauth2.resourceserver.filter.authentication.JwtAuthenticationFilter;
 import springoauth2.resourceserver.filter.authorization.JwtAuthorizationMacFilter;
+import springoauth2.resourceserver.filter.authorization.JwtAuthorizationRsaFilter;
 import springoauth2.resourceserver.signature.MacSecuritySigner;
+import springoauth2.resourceserver.signature.RsaSecuritySigner;
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
 public class OAuth2ResourceServer {
-
-    private final MacSecuritySigner macSecuritySigner;
-    private final OctetSequenceKey octetSequenceKey;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -51,18 +54,22 @@ public class OAuth2ResourceServer {
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService())
-                .addFilterBefore(jwtAuthenticationFilter(macSecuritySigner, octetSequenceKey), UsernamePasswordAuthenticationFilter.class)
-                .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer
-                        .jwt(Customizer.withDefaults())
-                );
+                .addFilterBefore(jwtAuthenticationFilter(null, null), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthorizationRsaFilter(null), UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
 
-    //@Bean JWtDecoder 방식에서는 JWtDecoder 가 토큰 검증을 대신하기 떄문에 이 필터는 필요 없다.
-    public JwtAuthorizationMacFilter jwtAuthorizationMacFilter(OctetSequenceKey octetSequenceKey) {
-        return new JwtAuthorizationMacFilter(octetSequenceKey);
+    @Bean
+    public JwtAuthorizationRsaFilter jwtAuthorizationRsaFilter(RSAKey rsaKey) throws JOSEException {
+        return new JwtAuthorizationRsaFilter(new RSASSAVerifier(rsaKey.toRSAPublicKey()));
     }
+
+//    @Bean
+//    public JwtAuthorizationMacFilter jwtAuthorizationMacFilter(OctetSequenceKey octetSequenceKey) throws JOSEException {
+//        return new JwtAuthorizationMacFilter(new MACVerifier(octetSequenceKey.toSecretKey()));
+//    }
 
     private CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -95,9 +102,16 @@ public class OAuth2ResourceServer {
     /**
      * 사용자 승인 및 토큰 발행 필터
      */
+//    @Bean
+//    public JwtAuthenticationFilter jwtAuthenticationFilter(MacSecuritySigner macSecuritySigner, OctetSequenceKey octetSequenceKey) throws Exception {
+//        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(macSecuritySigner, octetSequenceKey);
+//        jwtAuthenticationFilter.setAuthenticationManager(authenticationManager(null));
+//        return jwtAuthenticationFilter;
+//    }
+
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(MacSecuritySigner macSecuritySigner, OctetSequenceKey octetSequenceKey) throws Exception {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(macSecuritySigner, octetSequenceKey);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(RsaSecuritySigner rsaSecuritySigner, RSAKey rsaKey) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(rsaSecuritySigner, rsaKey);
         jwtAuthenticationFilter.setAuthenticationManager(authenticationManager(null));
         return jwtAuthenticationFilter;
     }

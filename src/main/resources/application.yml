@@ -7,7 +7,8 @@ spring:
     oauth2:
       resourceserver: # 리소스 서버 설정으로 인증된 사용자만 접근 가능하도록 설정
         jwt:
-          jws-algorithms: HS256
+#          jws-algorithms: HS256 # 대칭키 알고리즘
+          jws-algorithms: RS256 # 비대칭키 알고리즘
 
 #          issuer-uri: http://localhost:8080/realms/oauth2 # issuer-uri 또는 jwk-set-uri 둘 중 하나만 설정해도 리소스서버 정상작동
 #          jwk-set-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/certs

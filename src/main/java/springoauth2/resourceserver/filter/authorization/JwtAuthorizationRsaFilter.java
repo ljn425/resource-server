@@ -3,8 +3,9 @@ package springoauth2.resourceserver.filter.authorization;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.MACVerifier;
-import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.FilterChain;
@@ -26,12 +27,12 @@ import java.util.UUID;
 /**
  * 부모클래스 : OncePerRequestFilter
  * - 동일한 요청에 대해서 한번만 필터가 실행되도록 보장해주는 필터
- *
- * JwtAuthorizationMacFilter
- * - 송신자가 보내온 토큰을 파싱하고 검증 후 인증 처리하는 필터(MAC: 대칭키 기반)
+ * JwtAuthorizationRsaFilter
+ * - 송신자가 보내온 토큰을 파싱하고 검증 후 인증 처리하는 필터(RSA: 비대칭키 기반)
  */
-public class JwtAuthorizationMacFilter extends JwtAuthorizationFilter {
-    public JwtAuthorizationMacFilter(JWSVerifier jwsVerifier) {
+public class JwtAuthorizationRsaFilter extends JwtAuthorizationFilter {
+
+    public JwtAuthorizationRsaFilter(JWSVerifier jwsVerifier) {
         super(jwsVerifier);
     }
 }
