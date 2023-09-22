@@ -6,10 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,12 +52,14 @@ public class OAuth2ResourceServer {
                 )
                 .userDetailsService(userDetailsService())
                 .addFilterBefore(jwtAuthenticationFilter(macSecuritySigner, octetSequenceKey), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthorizationMacFilter(octetSequenceKey), UsernamePasswordAuthenticationFilter.class);
+                .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer
+                        .jwt(Customizer.withDefaults())
+                );
 
         return http.build();
     }
 
-    @Bean
+    //@Bean JWtDecoder 방식에서는 JWtDecoder 가 토큰 검증을 대신하기 떄문에 이 필터는 필요 없다.
     public JwtAuthorizationMacFilter jwtAuthorizationMacFilter(OctetSequenceKey octetSequenceKey) {
         return new JwtAuthorizationMacFilter(octetSequenceKey);
     }
