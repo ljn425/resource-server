@@ -1,8 +1,8 @@
 package springoauth2.resourceserver.config;
 
+import com.nimbusds.jose.jwk.OctetSequenceKey;
 import jakarta.servlet.Filter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.proxy.NoOp;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,27 +23,41 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import springoauth2.resourceserver.filter.authentication.JwtAuthenticationFilter;
+import springoauth2.resourceserver.filter.authorization.JwtAuthorizationMacFilter;
+import springoauth2.resourceserver.signature.MacSecuritySigner;
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
 public class OAuth2ResourceServer {
 
+    private final MacSecuritySigner macSecuritySigner;
+    private final OctetSequenceKey octetSequenceKey;
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .authorizeHttpRequests(request -> request
-                    .requestMatchers("/").permitAll()
-                    .anyRequest().authenticated()
-                )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors
                         .configurationSource(corsConfigurationSource())
                 )
+                .sessionManagement(sessionManagement -> sessionManagement
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 세션을 사용하지 않음
+                )
+                .authorizeHttpRequests(request -> request
+                        .requestMatchers("/").permitAll()
+                        .anyRequest().authenticated()
+                )
                 .userDetailsService(userDetailsService())
-                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter(macSecuritySigner, octetSequenceKey), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthorizationMacFilter(octetSequenceKey), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public JwtAuthorizationMacFilter jwtAuthorizationMacFilter(OctetSequenceKey octetSequenceKey) {
+        return new JwtAuthorizationMacFilter(octetSequenceKey);
     }
 
     private CorsConfigurationSource corsConfigurationSource() {
@@ -73,9 +88,12 @@ public class OAuth2ResourceServer {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
+    /**
+     * 사용자 승인 및 토큰 발행 필터
+     */
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() throws Exception {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter();
+    public JwtAuthenticationFilter jwtAuthenticationFilter(MacSecuritySigner macSecuritySigner, OctetSequenceKey octetSequenceKey) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(macSecuritySigner, octetSequenceKey);
         jwtAuthenticationFilter.setAuthenticationManager(authenticationManager(null));
         return jwtAuthenticationFilter;
     }
